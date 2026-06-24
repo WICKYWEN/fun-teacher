@@ -465,14 +465,14 @@ async function pushScore(newEntry) {
   }
 }
 
-function doLogin() {
+async function doLogin() {
   const input = document.getElementById('nickInput');
   const nick = input.value.trim();
   if (!nick) { input.focus(); input.style.borderColor = '#ff6b6b'; setTimeout(() => input.style.borderColor = '', 1500); return; }
   localStorage.setItem(NICK_KEY, nick);
   document.getElementById('loginOverlay').style.display = 'none';
   document.getElementById('nickDisplay').textContent = '👋 ' + nick;
-  initDaily();
+  await initDaily();
 }
 
 function logout() {
@@ -488,28 +488,42 @@ function logout() {
   }
 })();
 
-// ===== 每日内容池 =====
-const videoPool = [
-  { bv: 'BV1Jt4y1D7FY', title: '萌宠搞笑合集', desc: '看完心情超好 🐱' },
-  { bv: 'BV1GJ411x7G', title: '沙雕广告合集', desc: '笑到肚子疼' },
-  { bv: 'BV1xx411c7mD', title: '鬼畜经典', desc: '诸葛亮 × 王朗' },
-  { bv: 'BV1Js411o76', title: '动物迷惑行为', desc: '太可爱了叭' },
-  { bv: 'BV1q4411d7f', title: '治愈系风景', desc: '云旅游放松一下' },
-  { bv: 'BV1C4411u7t', title: '萌娃搞笑瞬间', desc: '纯真最治愈' },
-  { bv: 'BV1T4411u7J', title: '搞笑综艺剪辑', desc: '快乐源泉' },
-  { bv: 'BV1RA411q7B', title: '猫咪日常', desc: '云吸猫时间 🐱' },
-  { bv: 'BV1k4411m7g', title: '可爱狗狗合集', desc: '太治愈了 🐶' },
-  { bv: 'BV1ut411A7R', title: '老师搞笑日常', desc: '过于真实了' },
-  { bv: 'BV1q4411d7B', title: '小熊猫合集', desc: '治愈系小可爱' },
-  { bv: 'BV1g4411u7k', title: '相声小品经典', desc: '经典永流传' },
-  { bv: 'BV1eq4y1t7N', title: '原创治愈动画', desc: '画风超温暖' },
-  { bv: 'BV1ST4y1w7x', title: '科普趣味知识', desc: '边看边学' },
-  { bv: 'BV1UK4y1a7p', title: '创意手工DIY', desc: '看完想动手' },
-  { bv: 'BV1hb4y1C7d', title: '大自然的声音', desc: '白噪音助眠' },
-  { bv: 'BV1d441y1n7', title: '趣味编程教学', desc: '轻松学编程' },
-  { bv: 'BV1Yp4y1q7u', title: '减压视频合集', desc: '极度舒适' },
+// ===== 每日视频 =====
+const VIDEO_API = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/daily_videos.json`;
+
+// 备用视频池（当 API 获取失败时使用）
+const fallbackVideos = [
+  { bv: 'BV1znjX64Eas', title: '热门推荐', desc: 'B站每日精选' },
+  { bv: 'BV1QSjm6wEBT', title: '热门推荐', desc: 'B站每日精选' },
+  { bv: 'BV1DG7g6dEAZ', title: '热门推荐', desc: 'B站每日精选' },
+  { bv: 'BV1s6j26JEG5', title: '热门推荐', desc: 'B站每日精选' },
+  { bv: 'BV196jR6HEtg', title: '热门推荐', desc: 'B站每日精选' },
+  { bv: 'BV1UWLf6REiz', title: '热门推荐', desc: 'B站每日精选' },
+  { bv: 'BV1oLj26iEPd', title: '热门推荐', desc: 'B站每日精选' },
+  { bv: 'BV1wtjm67EBQ', title: '热门推荐', desc: 'B站每日精选' },
+  { bv: 'BV1evjR6REcn', title: '热门推荐', desc: 'B站每日精选' },
+  { bv: 'BV1617N6ZEua', title: '热门推荐', desc: 'B站每日精选' },
+  { bv: 'BV1kGjt6dECk', title: '热门推荐', desc: 'B站每日精选' },
+  { bv: 'BV1bk7f68E4S', title: '热门推荐', desc: 'B站每日精选' },
 ];
 
+async function fetchDailyVideos() {
+  try {
+    const r = await fetch(VIDEO_API, {
+      headers: { Authorization: `Bearer ${GH_TOKEN}` },
+      cache: 'no-cache'
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const file = await r.json();
+    const raw = atob(file.content.replace(/\s/g, ''));
+    return JSON.parse(decodeURIComponent(escape(raw)));
+  } catch(e) {
+    console.warn('fetchDailyVideos failed, using fallback', e);
+    return null;
+  }
+}
+
+let dailyVideos = [];
 const musicPool = [
   { title: '夜的钢琴曲五', artist: '石进', id: '265989', cover: 'linear-gradient(135deg, #1a2980, #26d0ce)' },
   { title: '卡农 (Canon)', artist: 'Pachelbel', id: '5264662', cover: 'linear-gradient(135deg, #a8edea, #fed6e3)' },
@@ -537,14 +551,15 @@ const musicPool = [
   { title: '圣母颂', artist: '古诺/巴赫', id: '29761414', cover: 'linear-gradient(135deg, #fa709a, #fee140)' },
 ];
 
-let dailyVideos = [];
 let dailyMusic = [];
-function initDaily() {
+async function initDaily() {
   const seed = getTodaySeed();
   const dateStr = new Date().toLocaleDateString('zh-CN', { year:'numeric', month:'long', day:'numeric', weekday:'long' });
   document.getElementById('dailyBadge').textContent = '📅 ' + dateStr;
 
-  dailyVideos = seededShuffle(videoPool, seed).slice(0, 6);
+  const apiVideos = await fetchDailyVideos();
+  const pool = apiVideos && apiVideos.length >= 6 ? apiVideos : fallbackVideos;
+  dailyVideos = seededShuffle(pool, seed).slice(0, 6);
   dailyMusic = seededShuffle(musicPool, seed).slice(0, 12);
 
   renderVideos();
@@ -945,8 +960,8 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
 // ===== 初始化 =====
 // 页面加载后立即初始化所有内容
-document.addEventListener('DOMContentLoaded', function() {
-  initDaily();
+document.addEventListener('DOMContentLoaded', async function() {
+  await initDaily();
   const nick = localStorage.getItem(NICK_KEY);
   if (nick) {
     document.getElementById('loginOverlay').style.display = 'none';
