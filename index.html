@@ -281,10 +281,13 @@ function logout() {
   location.reload();
 }
 
-(function() {
-  if (localStorage.getItem(NICK_KEY)) {
+// 页面加载时检查登录状态
+(function boot() {
+  const nick = localStorage.getItem(NICK_KEY);
+  if (nick) {
     document.getElementById('loginOverlay').style.display = 'none';
-    document.getElementById('nickDisplay').textContent = '👋 ' + localStorage.getItem(NICK_KEY);
+    document.getElementById('nickDisplay').textContent = '👋 ' + nick;
+    initDaily();
   }
 })();
 
@@ -521,9 +524,6 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
   });
 });
-
-// ===== 初始化 =====
-if (localStorage.getItem(NICK_KEY)) initDaily();
 
 // 回车登录
 document.getElementById('nickInput').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
