@@ -328,7 +328,7 @@ function logout() {
   location.reload();
 }
 
-(function checkLogin() {
+(function() {
   const nick = localStorage.getItem(NICK_KEY);
   if (nick) {
     document.getElementById('loginOverlay').style.display = 'none';
@@ -629,7 +629,6 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 });
 
 // ===== 初始化 =====
-checkLogin();
 if (localStorage.getItem(NICK_KEY)) initDaily();
 
 // 回车登录
