@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>教师解压乐园</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  background: linear-gradient(135deg, #fce4ec 0%, #e3f2fd 50%, #fff3e0 100%);
+  min-height: 100vh;
+  padding: 20px;
+}
+
+/* 登录遮罩 */
+.login-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(6px);
+}
+.login-box {
+  background: #fff; border-radius: 24px; padding: 40px;
+  text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  max-width: 380px; width: 90%;
+}
+.login-box h2 { font-size: 1.6em; margin-bottom: 6px; color: #333; }
+.login-box .sub { color: #999; font-size: 0.9em; margin-bottom: 24px; }
+.login-box input {
+  width: 100%; padding: 14px 18px; border: 2px solid #e0e0e0;
+  border-radius: 14px; font-size: 1em; outline: none;
+  transition: border-color 0.3s;
+}
+.login-box input:focus { border-color: #42a5f5; }
+.login-box .login-btn {
+  margin-top: 16px; width: 100%; padding: 14px;
+  border: none; border-radius: 14px;
+  background: linear-gradient(135deg, #42a5f5, #1565c0);
+  color: #fff; font-size: 1.1em; font-weight: 600;
+  cursor: pointer; transition: all 0.3s;
+}
+.login-box .login-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(21,101,192,0.3); }
+
+header {
+  text-align: center; padding: 16px 0 10px;
+}
+header .user-bar {
+  display: flex; justify-content: flex-end; align-items: center;
+  max-width: 900px; margin: 0 auto 10px; gap: 10px;
+}
+.user-bar .nick { color: #666; font-size: 0.9em; }
+.user-bar .logout-btn {
+  padding: 4px 14px; border: 1px solid #ddd; border-radius: 12px;
+  background: #fff; cursor: pointer; font-size: 0.8em; color: #999;
+  transition: all 0.2s;
+}
+.user-bar .logout-btn:hover { background: #f5f5f5; color: #666; }
+h1 {
+  font-size: 2.5em;
+  background: linear-gradient(90deg, #ff6b6b, #ffa726, #66bb6a, #42a5f5, #ab47bc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.subtitle { color: #999; font-size: 1em; margin-top: 4px; }
+.daily-badge {
+  display: inline-block; margin-top: 8px;
+  padding: 4px 16px; background: rgba(255,107,107,0.1);
+  border-radius: 20px; color: #ff6b6b; font-size: 0.85em;
+}
+
+.tabs {
+  display: flex; justify-content: center; gap: 12px;
+  margin: 16px 0; flex-wrap: wrap;
+}
+.tab-btn {
+  padding: 10px 24px; border: none; border-radius: 25px;
+  font-size: 0.95em; font-weight: 600; cursor: pointer;
+  transition: all 0.3s; background: #fff; color: #555;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.tab-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+.tab-btn.active { color: #fff; box-shadow: 0 6px 20px rgba(0,0,0,0.18); }
+.tab-btn.g1.active { background: linear-gradient(135deg, #ff6b6b, #ee5a24); }
+.tab-btn.g2.active { background: linear-gradient(135deg, #42a5f5, #1565c0); }
+.tab-btn.g3.active { background: linear-gradient(135deg, #66bb6a, #2e7d32); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* 游戏区 */
+.game-area { max-width: 500px; margin: 0 auto; text-align: center; }
+.score-board { font-size: 1.2em; margin-bottom: 10px; color: #333; }
+.score-board span { font-weight: 700; color: #ff6b6b; }
+.game-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 10px; max-width: 360px; margin: 0 auto;
+}
+.hole {
+  aspect-ratio: 1; background: #8d6e63;
+  border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; font-size: 2.2em; cursor: pointer;
+  box-shadow: inset 0 8px 12px rgba(0,0,0,0.3);
+  transition: all 0.15s; position: relative; overflow: hidden;
+}
+.hole .mole { transition: all 0.2s; transform: translateY(100%); opacity: 0; user-select: none; }
+.hole.up .mole { transform: translateY(0); opacity: 1; }
+.hole:active { transform: scale(0.92); }
+.game-btn {
+  margin-top: 14px; padding: 10px 32px; font-size: 1em;
+  border: none; border-radius: 25px;
+  background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+  color: #fff; cursor: pointer; font-weight: 600;
+  transition: all 0.3s;
+}
+.game-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(238,90,36,0.4); }
+
+/* 排行榜 */
+.leaderboard {
+  max-width: 500px; margin: 20px auto 0;
+  background: #fff; border-radius: 18px; padding: 18px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+.leaderboard h3 { text-align: center; color: #333; margin-bottom: 12px; font-size: 1em; }
+.leaderboard table { width: 100%; border-collapse: collapse; }
+.leaderboard td {
+  padding: 6px 10px; font-size: 0.9em; border-bottom: 1px solid #f5f5f5;
+}
+.leaderboard .rank { width: 30px; text-align: center; color: #999; }
+.leaderboard .name { color: #333; }
+.leaderboard .sc { text-align: right; color: #ff6b6b; font-weight: 600; }
+.leaderboard .medal { font-size: 1.1em; }
+.leaderboard .empty { text-align: center; color: #ccc; padding: 20px 0; }
+
+/* 视频区 */
+.video-grid {
+  display: grid; gap: 20px;
+  max-width: 900px; margin: 0 auto;
+}
+.video-card {
+  background: #fff; border-radius: 16px; overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  transition: transform 0.3s;
+}
+.video-card:hover { transform: translateY(-4px); box-shadow: 0 8px 30px rgba(0,0,0,0.1); }
+.video-card iframe { width: 100%; aspect-ratio: 16/9; border: none; }
+.video-info { padding: 12px 16px; }
+.video-info h3 { font-size: 0.95em; color: #333; }
+.video-info p { font-size: 0.8em; color: #999; margin-top: 2px; }
+
+/* 音乐区 */
+.music-area { max-width: 500px; margin: 0 auto; }
+.music-player {
+  background: #fff; border-radius: 20px; padding: 28px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06); text-align: center;
+}
+.music-cover {
+  width: 140px; height: 140px; border-radius: 50%;
+  margin: 0 auto 16px; background-size: cover; background-position: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  animation: spin 10s linear infinite; animation-play-state: paused;
+}
+.music-cover.playing { animation-play-state: running; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.music-title { font-size: 1.1em; color: #333; }
+.music-artist { color: #999; font-size: 0.85em; margin: 2px 0 16px; }
+.music-controls { display: flex; justify-content: center; align-items: center; gap: 16px; }
+.ctrl-btn {
+  width: 44px; height: 44px; border: none; border-radius: 50%;
+  background: #f5f5f5; font-size: 1.1em; cursor: pointer;
+  transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+}
+.ctrl-btn:hover { background: #e0e0e0; transform: scale(1.1); }
+.ctrl-btn.play-btn {
+  width: 56px; height: 56px; font-size: 1.4em;
+  background: linear-gradient(135deg, #66bb6a, #2e7d32); color: #fff;
+}
+.ctrl-btn.play-btn:hover { box-shadow: 0 6px 20px rgba(46,125,50,0.4); }
+.music-list {
+  margin-top: 14px; background: #fff; border-radius: 16px;
+  overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+.music-item {
+  padding: 12px 16px; display: flex; align-items: center;
+  justify-content: space-between; cursor: pointer;
+  transition: background 0.2s; border-bottom: 1px solid #f5f5f5;
+}
+.music-item:last-child { border-bottom: none; }
+.music-item:hover { background: #f9f9f9; }
+.music-item.active { background: #e8f5e9; }
+.music-item .name { font-size: 0.9em; color: #333; }
+.music-item .artist { font-size: 0.78em; color: #999; }
+
+/* 解压小玩具 */
+.toy-area {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 14px; max-width: 600px; margin: 16px auto 0;
+}
+.toy-btn {
+  padding: 12px 22px; border: none; border-radius: 14px;
+  background: #fff; font-size: 0.95em; cursor: pointer;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  transition: all 0.3s; user-select: none;
+}
+.toy-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.08); }
+
+#bubbleContainer {
+  position: fixed; top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none; z-index: 9998;
+}
+.bubble {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  animation: floatUp 3s ease-out forwards;
+}
+@keyframes floatUp {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-500px) scale(0.2); }
+}
+footer { text-align: center; padding: 24px 0 10px; color: #ccc; font-size: 0.8em; }
+</style>
+</head>
+<body>
+
+<!-- 登录遮罩 -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <h2>🌿 欢迎来到解压乐园</h2>
+    <div class="sub">输入昵称，开始放松吧 ✨</div>
+    <input type="text" id="nickInput" placeholder="输入你的昵称..." maxlength="12" autofocus>
+    <button class="login-btn" onclick="doLogin()">🎉 进入乐园</button>
+  </div>
+</div>
+
+<header>
+  <div class="user-bar">
+    <span class="nick" id="nickDisplay"></span>
+    <button class="logout-btn" onclick="logout()">退出</button>
+  </div>
+  <h1>🌈 教师解压乐园</h1>
+  <div class="subtitle">老师们辛苦了！每天都有新惊喜 🎁</div>
+  <div class="daily-badge" id="dailyBadge"></div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn g1 active" data-tab="game">🎮 打地鼠</button>
+  <button class="tab-btn g2" data-tab="video">🎬 今日视频</button>
+  <button class="tab-btn g3" data-tab="music">🎵 今日音乐</button>
+</div>
+
+<div id="tab-game" class="tab-content active">
+  <div class="game-area">
+    <div class="score-board">
+      ⏱ <span id="timerDisplay">30</span>s &nbsp;|&nbsp; 得分: <span id="score">0</span>
+    </div>
+    <div class="game-grid" id="gameGrid"></div>
+    <button class="game-btn" id="gameStartBtn">🔨 开始敲地鼠！</button>
+    <div class="toy-area">
+      <button class="toy-btn" onclick="popBubbles()">🫧 吹泡泡</button>
+      <button class="toy-btn" onclick="document.body.style.background='linear-gradient(135deg,'+['#fce4ec,#e3f2fd,#fff3e0','#e8f5e9,#fff9c4,#f3e5f5','#ffebee,#e0f7fa,#fff8e1','#fbe9e7,#e8eaf6,#f1f8e9'][Math.floor(Math.random()*4)])+' 100%'">🎨 换心情</button>
+      <button class="toy-btn" onclick="showRainbow()">🌈 彩虹</button>
+    </div>
+  </div>
+  <div class="leaderboard">
+    <h3>🏆 打地鼠排行榜</h3>
+    <table id="rankTable"><tr><td class="empty" colspan="3">还没有记录，快来打地鼠吧！</td></tr></table>
+  </div>
+</div>
+
+<div id="tab-video" class="tab-content">
+  <div class="video-grid" id="videoGrid"></div>
+</div>
+
+<div id="tab-music" class="tab-content">
+  <div class="music-area">
+    <div class="music-player">
+      <div class="music-cover" id="musicCover"></div>
+      <div class="music-title" id="musicTitle">加载中...</div>
+      <div class="music-artist" id="musicArtist"></div>
+      <div class="music-controls">
+        <button class="ctrl-btn" onclick="prevMusic()">⏮</button>
+        <button class="ctrl-btn play-btn" id="playBtn" onclick="togglePlay()">▶</button>
+        <button class="ctrl-btn" onclick="nextMusic()">⏭</button>
+      </div>
+      <audio id="audioPlayer" preload="metadata"></audio>
+      <div style="margin-top:10px;font-size:0.78em;color:#bbb;" id="musicFallback"></div>
+    </div>
+    <div class="music-list" id="musicList"></div>
+  </div>
+</div>
+
+<footer>Made with ❤️ 给最辛苦的老师们 · 每日内容自动更新</footer>
+<div id="bubbleContainer"></div>
+
+<script>
+// ===== 日期种子 =====
+function seededShuffle(arr, seed) {
+  const a = [...arr];
+  let s = seed;
+  for (let i = a.length - 1; i > 0; i--) {
+    s = (s * 9301 + 49297) % 233280;
+    const j = s % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function getTodaySeed() {
+  const d = new Date();
+  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+}
+
+// ===== 登录 =====
+const NICK_KEY = 'fun_nick';
+const SCORE_KEY = 'fun_leaderboard';
+
+function doLogin() {
+  const input = document.getElementById('nickInput');
+  const nick = input.value.trim();
+  if (!nick) { input.focus(); input.style.borderColor = '#ff6b6b'; setTimeout(() => input.style.borderColor = '', 1500); return; }
+  localStorage.setItem(NICK_KEY, nick);
+  document.getElementById('loginOverlay').style.display = 'none';
+  document.getElementById('nickDisplay').textContent = '👋 ' + nick;
+  initDaily();
+}
+
+function logout() {
+  localStorage.removeItem(NICK_KEY);
+  location.reload();
+}
+
+(function checkLogin() {
+  const nick = localStorage.getItem(NICK_KEY);
+  if (nick) {
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('nickDisplay').textContent = '👋 ' + nick;
+  }
+})();
+
+// ===== 每日内容池 =====
+const videoPool = [
+  { bv: 'BV1Jt4y1D7FY', title: '萌宠搞笑合集', desc: '看完心情超好 🐱' },
+  { bv: 'BV1GJ411x7G', title: '沙雕广告合集', desc: '笑到肚子疼' },
+  { bv: 'BV1xx411c7mD', title: '鬼畜经典', desc: '诸葛亮 × 王朗' },
+  { bv: 'BV1Js411o76', title: '动物迷惑行为', desc: '太可爱了叭' },
+  { bv: 'BV1q4411d7f', title: '治愈系风景', desc: '云旅游放松一下' },
+  { bv: 'BV1C4411u7t', title: '萌娃搞笑瞬间', desc: '纯真最治愈' },
+  { bv: 'BV1T4411u7J', title: '搞笑综艺剪辑', desc: '快乐源泉' },
+  { bv: 'BV1RA411q7B', title: '猫咪日常', desc: '云吸猫时间 🐱' },
+  { bv: 'BV1k4411m7g', title: '可爱狗狗合集', desc: '太治愈了 🐶' },
+  { bv: 'BV1ut411A7R', title: '老师搞笑日常', desc: '过于真实了' },
+  { bv: 'BV1q4411d7B', title: '小熊猫合集', desc: '治愈系小可爱' },
+  { bv: 'BV1g4411u7k', title: '相声小品经典', desc: '经典永流传' },
+];
+
+const musicPool = [
+  { title: '夜的钢琴曲五', artist: '石进', id: '265989', cover: 'linear-gradient(135deg, #1a2980, #26d0ce)' },
+  { title: '卡农 (Canon)', artist: 'Pachelbel', id: '5264662', cover: 'linear-gradient(135deg, #a8edea, #fed6e3)' },
+  { title: 'River Flows In You', artist: 'Yiruma', id: '29760215', cover: 'linear-gradient(135deg, #667eea, #764ba2)' },
+  { title: '菊次郎的夏天', artist: '久石让', id: '579213', cover: 'linear-gradient(135deg, #ffe259, #ffa751)' },
+  { title: '致爱丽丝', artist: '贝多芬', id: '281368', cover: 'linear-gradient(135deg, #ee9ca7, #ffdde1)' },
+  { title: '晴天 (钢琴版)', artist: '周杰伦', id: '186016', cover: 'linear-gradient(135deg, #f5af19, #f12711)' },
+  { title: '梦中的婚礼', artist: 'Richard Clayderman', id: '29760305', cover: 'linear-gradient(135deg, #c94b4b, #4b134f)' },
+  { title: '蓝色多瑙河', artist: '施特劳斯', id: '17934527', cover: 'linear-gradient(135deg, #2193b0, #6dd5ed)' },
+  { title: '小夜曲', artist: '舒伯特', id: '29760520', cover: 'linear-gradient(135deg, #0c3483, #a2b6df)' },
+  { title: '月光奏鸣曲', artist: '贝多芬', id: '29760412', cover: 'linear-gradient(135deg, #2c3e50, #bdc3c7)' },
+  { title: '神秘园之歌', artist: 'Secret Garden', id: '29760644', cover: 'linear-gradient(135deg, #134e5e, #71b280)' },
+  { title: '春江花月夜', artist: '古筝名曲', id: '29760778', cover: 'linear-gradient(135deg, #d4fc79, #96e6a1)' },
+];
+
+let dailyVideos = [];
+let dailyMusic = [];
+function initDaily() {
+  const seed = getTodaySeed();
+  const dateStr = new Date().toLocaleDateString('zh-CN', { year:'numeric', month:'long', day:'numeric', weekday:'long' });
+  document.getElementById('dailyBadge').textContent = '📅 ' + dateStr;
+
+  dailyVideos = seededShuffle(videoPool, seed).slice(0, 3);
+  dailyMusic = seededShuffle(musicPool, seed).slice(0, 6);
+
+  renderVideos();
+  initMusic();
+  renderLeaderboard();
+}
+
+// ===== 游戏 =====
+const grid = document.getElementById('gameGrid');
+const scoreEl = document.getElementById('score');
+let score = 0, timeLeft = 30;
+let gameTimer = null, moleInterval = null, countdownInterval = null;
+let isPlaying = false;
+
+for (let i = 0; i < 9; i++) {
+  const hole = document.createElement('div');
+  hole.className = 'hole'; hole.dataset.idx = i;
+  const mole = document.createElement('div');
+  mole.className = 'mole'; mole.textContent = '🐹';
+  hole.appendChild(mole);
+  hole.addEventListener('click', () => whack(i));
+  grid.appendChild(hole);
+}
+
+function whack(idx) {
+  if (!isPlaying) return;
+  const hole = grid.children[idx];
+  if (hole.classList.contains('up')) {
+    score++; scoreEl.textContent = score;
+    hole.classList.remove('up');
+    playBeep(800, 0.15);
+  } else {
+    score = Math.max(0, score - 1);
+    scoreEl.textContent = score;
+  }
+}
+
+function showMole() {
+  grid.querySelectorAll('.hole').forEach(h => h.classList.remove('up'));
+  const idx = Math.floor(Math.random() * 9);
+  const hole = grid.children[idx];
+  hole.classList.add('up');
+  setTimeout(() => hole.classList.remove('up'), 800 + Math.random() * 600);
+}
+
+document.getElementById('gameStartBtn').addEventListener('click', () => {
+  if (isPlaying) {
+    stopGame();
+    return;
+  }
+  isPlaying = true;
+  score = 0; timeLeft = 30;
+  scoreEl.textContent = '0';
+  document.getElementById('timerDisplay').textContent = '30';
+  document.getElementById('gameStartBtn').textContent = '⏹ 结束游戏';
+  moleInterval = setInterval(showMole, 900);
+  countdownInterval = setInterval(() => {
+    timeLeft--;
+    document.getElementById('timerDisplay').textContent = timeLeft;
+    if (timeLeft <= 0) {
+      stopGame();
+      const nick = localStorage.getItem(NICK_KEY);
+      saveScore(nick, score);
+      renderLeaderboard();
+      alert('⏰ 时间到！\n你的得分: ' + score);
+    }
+  }, 1000);
+});
+
+function stopGame() {
+  clearInterval(moleInterval);
+  clearInterval(countdownInterval);
+  clearTimeout(gameTimer);
+  isPlaying = false;
+  grid.querySelectorAll('.hole').forEach(h => h.classList.remove('up'));
+  document.getElementById('gameStartBtn').textContent = '🔨 开始敲地鼠！';
+}
+
+function playBeep(freq, dur) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.value = freq;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + dur);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + dur);
+  } catch(e) {}
+}
+
+// ===== 排行榜 =====
+function saveScore(nick, sc) {
+  const data = JSON.parse(localStorage.getItem(SCORE_KEY) || '[]');
+  data.push({ nick, score: sc, time: Date.now() });
+  data.sort((a, b) => b.score - a.score || a.time - b.time);
+  if (data.length > 50) data.length = 50;
+  localStorage.setItem(SCORE_KEY, JSON.stringify(data));
+}
+
+function renderLeaderboard() {
+  const data = JSON.parse(localStorage.getItem(SCORE_KEY) || '[]');
+  const table = document.getElementById('rankTable');
+  const medals = ['🥇', '🥈', '🥉'];
+  if (!data.length) {
+    table.innerHTML = '<tr><td class="empty" colspan="3">还没有记录，快来打地鼠吧！</td></tr>';
+    return;
+  }
+  const top = data.slice(0, 10);
+  table.innerHTML = top.map((item, i) => `<tr>
+    <td class="rank ${i < 3 ? 'medal' : ''}">${i < 3 ? medals[i] : '#' + (i+1)}</td>
+    <td class="name">${escHtml(item.nick)}</td>
+    <td class="sc">${item.score}</td>
+  </tr>`).join('');
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s; return d.innerHTML;
+}
+
+// ===== 视频 (B站) =====
+function renderVideos() {
+  const grid = document.getElementById('videoGrid');
+  grid.innerHTML = dailyVideos.map(v => `
+    <div class="video-card">
+      <iframe src="https://player.bilibili.com/player.html?bvid=${v.bv}&page=1&high_quality=1" allowfullscreen></iframe>
+      <div class="video-info">
+        <h3>🎬 ${v.title}</h3>
+        <p>${v.desc}</p>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ===== 音乐 (网易云) =====
+let currentIdx = 0;
+const audio = document.getElementById('audioPlayer');
+const playBtn = document.getElementById('playBtn');
+const cover = document.getElementById('musicCover');
+const titleEl = document.getElementById('musicTitle');
+const artistEl = document.getElementById('musicArtist');
+const listEl = document.getElementById('musicList');
+const fallbackEl = document.getElementById('musicFallback');
+
+function getMusicUrl(id) { return 'https://music.163.com/song/media/outer/url?id=' + id + '.mp3'; }
+
+function initMusic() {
+  currentIdx = 0;
+  renderMusicList();
+  loadMusic();
+}
+
+function renderMusicList() {
+  listEl.innerHTML = '';
+  dailyMusic.forEach((m, i) => {
+    const item = document.createElement('div');
+    item.className = 'music-item' + (i === currentIdx ? ' active' : '');
+    item.innerHTML = `<div><div class="name">${m.title}</div><div class="artist">${m.artist}</div></div><span>${i === currentIdx ? '▶' : ''}</span>`;
+    item.addEventListener('click', () => { currentIdx = i; loadMusic(); playMusic(); });
+    listEl.appendChild(item);
+  });
+}
+
+function loadMusic() {
+  const m = dailyMusic[currentIdx];
+  if (!m) return;
+  titleEl.textContent = m.title;
+  artistEl.textContent = m.artist;
+  cover.style.background = m.cover;
+  audio.src = getMusicUrl(m.id);
+  fallbackEl.innerHTML = `<a href="https://music.163.com/#/song?id=${m.id}" target="_blank" style="color:#42a5f5;text-decoration:none;">🔗 网易云打开</a>`;
+  renderMusicList();
+}
+
+function playMusic() {
+  audio.play().catch(() => {});
+  playBtn.textContent = '⏸';
+  cover.classList.add('playing');
+}
+
+function togglePlay() {
+  if (audio.paused) {
+    if (!audio.src) loadMusic();
+    playMusic();
+  } else {
+    audio.pause();
+    playBtn.textContent = '▶';
+    cover.classList.remove('playing');
+  }
+}
+
+function nextMusic() {
+  if (!dailyMusic.length) return;
+  currentIdx = (currentIdx + 1) % dailyMusic.length;
+  loadMusic();
+  if (!audio.paused) playMusic();
+}
+
+function prevMusic() {
+  if (!dailyMusic.length) return;
+  currentIdx = (currentIdx - 1 + dailyMusic.length) % dailyMusic.length;
+  loadMusic();
+  if (!audio.paused) playMusic();
+}
+
+audio.addEventListener('ended', nextMusic);
+
+// ===== 泡泡 =====
+function popBubbles() {
+  const c = document.getElementById('bubbleContainer');
+  const colors = ['#ff6b6b','#ffa726','#66bb6a','#42a5f5','#ab47bc','#f06292','#ffd54f'];
+  for (let i = 0; i < 30; i++) {
+    const b = document.createElement('div');
+    b.className = 'bubble';
+    const size = 10 + Math.random() * 30;
+    b.style.width = size + 'px'; b.style.height = size + 'px';
+    b.style.background = colors[Math.floor(Math.random() * colors.length)];
+    b.style.left = Math.random() * 100 + '%'; b.style.bottom = '0';
+    b.style.animationDuration = (2 + Math.random() * 2) + 's';
+    b.style.animationDelay = Math.random() * 0.5 + 's';
+    c.appendChild(b);
+    setTimeout(() => b.remove(), 4000);
+  }
+}
+
+// ===== 彩虹 =====
+let rainbowInterval = null;
+function showRainbow() {
+  if (rainbowInterval) { clearInterval(rainbowInterval); rainbowInterval = null; return; }
+  const body = document.body;
+  let hue = 0;
+  rainbowInterval = setInterval(() => {
+    body.style.background = `linear-gradient(135deg, hsl(${hue}, 70%, 90%), hsl(${hue + 60}, 70%, 90%), hsl(${hue + 120}, 70%, 90%))`;
+    hue = (hue + 1) % 360;
+  }, 50);
+  setTimeout(() => {
+    if (rainbowInterval) { clearInterval(rainbowInterval); rainbowInterval = null; }
+    body.style.background = 'linear-gradient(135deg, #fce4ec 0%, #e3f2fd 50%, #fff3e0 100%)';
+  }, 8000);
+}
+
+// ===== 标签切换 =====
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ===== 初始化 =====
+checkLogin();
+if (localStorage.getItem(NICK_KEY)) initDaily();
+
+// 回车登录
+document.getElementById('nickInput').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+</script>
+</body>
+</html>
