@@ -359,10 +359,16 @@ const GH_RAW = `https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/main/${
 
 async function fetchScores() {
   try {
-    const r = await fetch(GH_RAW + '?_=' + Date.now(), { cache: 'no-cache' });
-    if (!r.ok) throw new Error('fetch failed');
-    return await r.json();
+    const r = await fetch(GH_URL, {
+      headers: { Authorization: `Bearer ${GH_TOKEN}` },
+      cache: 'no-cache'
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const file = await r.json();
+    const raw = atob(file.content.replace(/\s/g, ''));
+    return JSON.parse(decodeURIComponent(escape(raw)));
   } catch(e) {
+    console.warn('fetchScores failed, using local', e);
     return JSON.parse(localStorage.getItem(SCORE_KEY) || '[]');
   }
 }
@@ -385,7 +391,7 @@ async function pushScore(newEntry) {
   try {
     const getR = await fetch(GH_URL, { headers: { Authorization: `Bearer ${GH_TOKEN}` } });
     const file = await getR.json();
-    const remote = JSON.parse(decodeURIComponent(escape(atob(file.content))));
+    const remote = JSON.parse(decodeURIComponent(escape(atob(file.content.replace(/\s/g, '')))));
     remote.push(newEntry);
     remote.sort((a, b) => b.score - a.score || a.time - b.time);
     const merged = remote.slice(0, 50);
