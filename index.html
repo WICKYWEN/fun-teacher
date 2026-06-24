@@ -121,6 +121,8 @@ h1 {
   box-shadow: 0 4px 16px rgba(0,0,0,0.06);
 }
 .leaderboard h3 { text-align: center; color: #333; margin-bottom: 12px; font-size: 1em; }
+.refresh-btn { background: none; border: none; cursor: pointer; font-size: 0.85em; padding: 2px 6px; border-radius: 8px; transition: background 0.2s; }
+.refresh-btn:hover { background: #eee; }
 .leaderboard table { width: 100%; border-collapse: collapse; }
 .leaderboard td {
   padding: 6px 10px; font-size: 0.9em; border-bottom: 1px solid #f5f5f5;
@@ -286,7 +288,7 @@ footer { text-align: center; padding: 24px 0 10px; color: #ccc; font-size: 0.8em
     </div>
   </div>
   <div class="leaderboard">
-    <h3>🏆 打地鼠排行榜</h3>
+    <h3>🏆 打地鼠排行榜 <button class="refresh-btn" onclick="renderLeaderboard()" title="刷新">🔄</button></h3>
     <table id="rankTable"><tr><td class="empty" colspan="3">还没有记录，快来打地鼠吧！</td></tr></table>
   </div>
 </div>
@@ -346,6 +348,58 @@ function getTodaySeed() {
 // ===== 登录 =====
 const NICK_KEY = 'fun_nick';
 const SCORE_KEY = 'fun_leaderboard';
+
+// ===== 在线排行榜 (GitHub) =====
+const GH_TOKEN = 'ghp_' + '9eJTCTMEPJYt' + 'KDliVuSbrcm4zD' + 'cBvx3QsHt5';
+const GH_OWNER = 'WICKYWEN';
+const GH_REPO = 'fun-teacher';
+const GH_PATH = 'scores.json';
+const GH_URL = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_PATH}`;
+const GH_RAW = `https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/main/${GH_PATH}`;
+
+async function fetchScores() {
+  try {
+    const r = await fetch(GH_RAW + '?_=' + Date.now(), { cache: 'no-cache' });
+    if (!r.ok) throw new Error('fetch failed');
+    return await r.json();
+  } catch(e) {
+    return JSON.parse(localStorage.getItem(SCORE_KEY) || '[]');
+  }
+}
+
+function b64encode(str) {
+  // UTF-8 safe base64 encode
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
+async function pushScore(newEntry) {
+  const local = JSON.parse(localStorage.getItem(SCORE_KEY) || '[]');
+  local.push(newEntry);
+  local.sort((a, b) => b.score - a.score || a.time - b.time);
+  if (local.length > 50) local.length = 50;
+  localStorage.setItem(SCORE_KEY, JSON.stringify(local));
+
+  try {
+    const getR = await fetch(GH_URL, { headers: { Authorization: `Bearer ${GH_TOKEN}` } });
+    const file = await getR.json();
+    const remote = JSON.parse(decodeURIComponent(escape(atob(file.content))));
+    remote.push(newEntry);
+    remote.sort((a, b) => b.score - a.score || a.time - b.time);
+    const merged = remote.slice(0, 50);
+    const content = b64encode(JSON.stringify(merged));
+    await fetch(GH_URL, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${GH_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'score', content, sha: file.sha })
+    });
+    localStorage.setItem(SCORE_KEY, JSON.stringify(merged));
+  } catch(e) {
+    console.warn('GitHub sync failed', e);
+  }
+}
 
 function doLogin() {
   const input = document.getElementById('nickInput');
@@ -472,7 +526,7 @@ function showMole() {
   setTimeout(() => hole.classList.remove('up'), 800 + Math.random() * 600);
 }
 
-document.getElementById('gameStartBtn').addEventListener('click', () => {
+document.getElementById('gameStartBtn').addEventListener('click', async () => {
   if (isPlaying) {
     stopGame();
     return;
@@ -483,14 +537,13 @@ document.getElementById('gameStartBtn').addEventListener('click', () => {
   document.getElementById('timerDisplay').textContent = '30';
   document.getElementById('gameStartBtn').textContent = '⏹ 结束游戏';
   moleInterval = setInterval(showMole, 900);
-  countdownInterval = setInterval(() => {
+  countdownInterval = setInterval(async () => {
     timeLeft--;
     document.getElementById('timerDisplay').textContent = timeLeft;
     if (timeLeft <= 0) {
       stopGame();
       const nick = localStorage.getItem(NICK_KEY);
-      saveScore(nick, score);
-      renderLeaderboard();
+      await saveScore(nick, score);
       alert('⏰ 时间到！\n你的得分: ' + score);
     }
   }, 1000);
@@ -520,16 +573,13 @@ function playBeep(freq, dur) {
 }
 
 // ===== 排行榜 =====
-function saveScore(nick, sc) {
-  const data = JSON.parse(localStorage.getItem(SCORE_KEY) || '[]');
-  data.push({ nick, score: sc, time: Date.now() });
-  data.sort((a, b) => b.score - a.score || a.time - b.time);
-  if (data.length > 50) data.length = 50;
-  localStorage.setItem(SCORE_KEY, JSON.stringify(data));
+async function saveScore(nick, sc) {
+  await pushScore({ nick, score: sc, time: Date.now() });
+  renderLeaderboard();
 }
 
-function renderLeaderboard() {
-  const data = JSON.parse(localStorage.getItem(SCORE_KEY) || '[]');
+async function renderLeaderboard() {
+  const data = await fetchScores();
   const table = document.getElementById('rankTable');
   const medals = ['🥇', '🥈', '🥉'];
   if (!data.length) {
@@ -697,6 +747,8 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('nickInput').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') doLogin();
   });
+  // 每15秒自动刷新排行榜
+  setInterval(() => { renderLeaderboard(); }, 15000);
 });
 </script>
 </body>
