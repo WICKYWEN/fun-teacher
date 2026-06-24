@@ -133,8 +133,8 @@ h1 {
 
 /* 视频区 */
 .video-grid {
-  display: grid; gap: 20px;
-  max-width: 900px; margin: 0 auto;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px; max-width: 1000px; margin: 0 auto;
 }
 .video-card {
   background: #fff; border-radius: 16px; overflow: hidden;
@@ -350,6 +350,12 @@ const videoPool = [
   { bv: 'BV1ut411A7R', title: '老师搞笑日常', desc: '过于真实了' },
   { bv: 'BV1q4411d7B', title: '小熊猫合集', desc: '治愈系小可爱' },
   { bv: 'BV1g4411u7k', title: '相声小品经典', desc: '经典永流传' },
+  { bv: 'BV1Y64y1Y77', title: '搞笑动物大合集', desc: '笑到停不下来' },
+  { bv: 'BV1uT4y1P7C', title: '治愈系美食制作', desc: '看完心情都好了' },
+  { bv: 'BV1Nk4y1z7x', title: '萌娃搞笑日常', desc: '纯真的快乐' },
+  { bv: 'BV1x64y1Y7a', title: '趣味科学实验', desc: '好玩又涨知识' },
+  { bv: 'BV1uB4y1K7z', title: '手工达人大挑战', desc: '看完手痒痒' },
+  { bv: 'BV1HT4y1J7x', title: '办公室搞笑合集', desc: '过于真实了' },
 ];
 
 const musicPool = [
@@ -365,6 +371,11 @@ const musicPool = [
   { title: '月光奏鸣曲', artist: '贝多芬', id: '29760412', cover: 'linear-gradient(135deg, #2c3e50, #bdc3c7)' },
   { title: '神秘园之歌', artist: 'Secret Garden', id: '29760644', cover: 'linear-gradient(135deg, #134e5e, #71b280)' },
   { title: '春江花月夜', artist: '古筝名曲', id: '29760778', cover: 'linear-gradient(135deg, #d4fc79, #96e6a1)' },
+  { title: '琵琶语', artist: '林海', id: '317247', cover: 'linear-gradient(135deg, #9796f0, #fbc2eb)' },
+  { title: '高山流水', artist: '古筝名曲', id: '347230', cover: 'linear-gradient(135deg, #a8c0ff, #3f2b96)' },
+  { title: '雨的印记 (Kiss The Rain)', artist: 'Yiruma', id: '29008370', cover: 'linear-gradient(135deg, #4facfe, #00f2fe)' },
+  { title: '梁祝', artist: '小提琴协奏曲', id: '28970424', cover: 'linear-gradient(135deg, #fa709a, #fee140)' },
+  { title: '秋日私语', artist: 'Richard Clayderman', id: '28970758', cover: 'linear-gradient(135deg, #f093fb, #f5576c)' },
 ];
 
 let dailyVideos = [];
@@ -374,8 +385,8 @@ function initDaily() {
   const dateStr = new Date().toLocaleDateString('zh-CN', { year:'numeric', month:'long', day:'numeric', weekday:'long' });
   document.getElementById('dailyBadge').textContent = '📅 ' + dateStr;
 
-  dailyVideos = seededShuffle(videoPool, seed).slice(0, 3);
-  dailyMusic = seededShuffle(musicPool, seed).slice(0, 6);
+  dailyVideos = seededShuffle(videoPool, seed).slice(0, 6);
+  dailyMusic = seededShuffle(musicPool, seed).slice(0, 12);
 
   renderVideos();
   initMusic();
