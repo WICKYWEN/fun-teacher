@@ -281,16 +281,6 @@ function logout() {
   location.reload();
 }
 
-// 页面加载时检查登录状态
-(function boot() {
-  const nick = localStorage.getItem(NICK_KEY);
-  if (nick) {
-    document.getElementById('loginOverlay').style.display = 'none';
-    document.getElementById('nickDisplay').textContent = '👋 ' + nick;
-    initDaily();
-  }
-})();
-
 // ===== 每日内容池 =====
 const videoPool = [
   { bv: 'BV1Jt4y1D7FY', title: '萌宠搞笑合集', desc: '看完心情超好 🐱' },
@@ -527,6 +517,16 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
 // 回车登录
 document.getElementById('nickInput').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+// 页面加载时初始化（所有函数和变量都已就绪）
+(function boot() {
+  const nick = localStorage.getItem(NICK_KEY);
+  if (nick) {
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('nickDisplay').textContent = '👋 ' + nick;
+  }
+  initDaily();
+})();
 </script>
 </body>
 </html>
