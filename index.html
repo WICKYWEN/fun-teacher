@@ -148,47 +148,12 @@ h1 {
 .video-info p { font-size: 0.8em; color: #999; margin-top: 2px; }
 
 /* 音乐区 */
-.music-area { max-width: 500px; margin: 0 auto; }
-.music-player {
-  background: #fff; border-radius: 20px; padding: 28px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.06); text-align: center;
+.music-area { max-width: 600px; margin: 0 auto; }
+.music-embed {
+  background: #fff; border-radius: 14px; overflow: hidden;
+  margin-bottom: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.05);
 }
-.music-cover {
-  width: 140px; height: 140px; border-radius: 50%;
-  margin: 0 auto 16px; background-size: cover; background-position: center;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-  animation: spin 10s linear infinite; animation-play-state: paused;
-}
-.music-cover.playing { animation-play-state: running; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.music-title { font-size: 1.1em; color: #333; }
-.music-artist { color: #999; font-size: 0.85em; margin: 2px 0 16px; }
-.music-controls { display: flex; justify-content: center; align-items: center; gap: 16px; }
-.ctrl-btn {
-  width: 44px; height: 44px; border: none; border-radius: 50%;
-  background: #f5f5f5; font-size: 1.1em; cursor: pointer;
-  transition: all 0.2s; display: flex; align-items: center; justify-content: center;
-}
-.ctrl-btn:hover { background: #e0e0e0; transform: scale(1.1); }
-.ctrl-btn.play-btn {
-  width: 56px; height: 56px; font-size: 1.4em;
-  background: linear-gradient(135deg, #66bb6a, #2e7d32); color: #fff;
-}
-.ctrl-btn.play-btn:hover { box-shadow: 0 6px 20px rgba(46,125,50,0.4); }
-.music-list {
-  margin-top: 14px; background: #fff; border-radius: 16px;
-  overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-}
-.music-item {
-  padding: 12px 16px; display: flex; align-items: center;
-  justify-content: space-between; cursor: pointer;
-  transition: background 0.2s; border-bottom: 1px solid #f5f5f5;
-}
-.music-item:last-child { border-bottom: none; }
-.music-item:hover { background: #f9f9f9; }
-.music-item.active { background: #e8f5e9; }
-.music-item .name { font-size: 0.9em; color: #333; }
-.music-item .artist { font-size: 0.78em; color: #999; }
+.music-embed iframe { width: 100%; border: none; display: block; }
 
 /* 解压小玩具 */
 .toy-area {
@@ -272,19 +237,7 @@ footer { text-align: center; padding: 24px 0 10px; color: #ccc; font-size: 0.8em
 
 <div id="tab-music" class="tab-content">
   <div class="music-area">
-    <div class="music-player">
-      <div class="music-cover" id="musicCover"></div>
-      <div class="music-title" id="musicTitle">加载中...</div>
-      <div class="music-artist" id="musicArtist"></div>
-      <div class="music-controls">
-        <button class="ctrl-btn" onclick="prevMusic()">⏮</button>
-        <button class="ctrl-btn play-btn" id="playBtn" onclick="togglePlay()">▶</button>
-        <button class="ctrl-btn" onclick="nextMusic()">⏭</button>
-      </div>
-      <audio id="audioPlayer" preload="metadata"></audio>
-      <div style="margin-top:10px;font-size:0.78em;color:#bbb;" id="musicFallback"></div>
-    </div>
-    <div class="music-list" id="musicList"></div>
+    <div id="musicEmbedList"></div>
   </div>
 </div>
 
@@ -328,11 +281,10 @@ function logout() {
   location.reload();
 }
 
-(function checkLogin() {
-  const nick = localStorage.getItem(NICK_KEY);
-  if (nick) {
+(function() {
+  if (localStorage.getItem(NICK_KEY)) {
     document.getElementById('loginOverlay').style.display = 'none';
-    document.getElementById('nickDisplay').textContent = '👋 ' + nick;
+    document.getElementById('nickDisplay').textContent = '👋 ' + localStorage.getItem(NICK_KEY);
   }
 })();
 
@@ -350,12 +302,6 @@ const videoPool = [
   { bv: 'BV1ut411A7R', title: '老师搞笑日常', desc: '过于真实了' },
   { bv: 'BV1q4411d7B', title: '小熊猫合集', desc: '治愈系小可爱' },
   { bv: 'BV1g4411u7k', title: '相声小品经典', desc: '经典永流传' },
-  { bv: 'BV1Y64y1Y77', title: '搞笑动物大合集', desc: '笑到停不下来' },
-  { bv: 'BV1uT4y1P7C', title: '治愈系美食制作', desc: '看完心情都好了' },
-  { bv: 'BV1Nk4y1z7x', title: '萌娃搞笑日常', desc: '纯真的快乐' },
-  { bv: 'BV1x64y1Y7a', title: '趣味科学实验', desc: '好玩又涨知识' },
-  { bv: 'BV1uB4y1K7z', title: '手工达人大挑战', desc: '看完手痒痒' },
-  { bv: 'BV1HT4y1J7x', title: '办公室搞笑合集', desc: '过于真实了' },
 ];
 
 const musicPool = [
@@ -389,7 +335,7 @@ function initDaily() {
   dailyMusic = seededShuffle(musicPool, seed).slice(0, 12);
 
   renderVideos();
-  initMusic();
+  renderMusic();
   renderLeaderboard();
 }
 
@@ -522,78 +468,15 @@ function renderVideos() {
   `).join('');
 }
 
-// ===== 音乐 (网易云) =====
-let currentIdx = 0;
-const audio = document.getElementById('audioPlayer');
-const playBtn = document.getElementById('playBtn');
-const cover = document.getElementById('musicCover');
-const titleEl = document.getElementById('musicTitle');
-const artistEl = document.getElementById('musicArtist');
-const listEl = document.getElementById('musicList');
-const fallbackEl = document.getElementById('musicFallback');
-
-function getMusicUrl(id) { return 'https://music.163.com/song/media/outer/url?id=' + id + '.mp3'; }
-
-function initMusic() {
-  currentIdx = 0;
-  renderMusicList();
-  loadMusic();
+// ===== 音乐 (网易云 embed) =====
+function renderMusic() {
+  const container = document.getElementById('musicEmbedList');
+  container.innerHTML = dailyMusic.map(m => `
+    <div class="music-embed">
+      <iframe src="https://music.163.com/outchain/player?type=2&id=${m.id}&auto=0&height=66" height="66"></iframe>
+    </div>
+  `).join('');
 }
-
-function renderMusicList() {
-  listEl.innerHTML = '';
-  dailyMusic.forEach((m, i) => {
-    const item = document.createElement('div');
-    item.className = 'music-item' + (i === currentIdx ? ' active' : '');
-    item.innerHTML = `<div><div class="name">${m.title}</div><div class="artist">${m.artist}</div></div><span>${i === currentIdx ? '▶' : ''}</span>`;
-    item.addEventListener('click', () => { currentIdx = i; loadMusic(); playMusic(); });
-    listEl.appendChild(item);
-  });
-}
-
-function loadMusic() {
-  const m = dailyMusic[currentIdx];
-  if (!m) return;
-  titleEl.textContent = m.title;
-  artistEl.textContent = m.artist;
-  cover.style.background = m.cover;
-  audio.src = getMusicUrl(m.id);
-  fallbackEl.innerHTML = `<a href="https://music.163.com/#/song?id=${m.id}" target="_blank" style="color:#42a5f5;text-decoration:none;">🔗 网易云打开</a>`;
-  renderMusicList();
-}
-
-function playMusic() {
-  audio.play().catch(() => {});
-  playBtn.textContent = '⏸';
-  cover.classList.add('playing');
-}
-
-function togglePlay() {
-  if (audio.paused) {
-    if (!audio.src) loadMusic();
-    playMusic();
-  } else {
-    audio.pause();
-    playBtn.textContent = '▶';
-    cover.classList.remove('playing');
-  }
-}
-
-function nextMusic() {
-  if (!dailyMusic.length) return;
-  currentIdx = (currentIdx + 1) % dailyMusic.length;
-  loadMusic();
-  if (!audio.paused) playMusic();
-}
-
-function prevMusic() {
-  if (!dailyMusic.length) return;
-  currentIdx = (currentIdx - 1 + dailyMusic.length) % dailyMusic.length;
-  loadMusic();
-  if (!audio.paused) playMusic();
-}
-
-audio.addEventListener('ended', nextMusic);
 
 // ===== 泡泡 =====
 function popBubbles() {
@@ -640,7 +523,6 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 });
 
 // ===== 初始化 =====
-checkLogin();
 if (localStorage.getItem(NICK_KEY)) initDaily();
 
 // 回车登录
