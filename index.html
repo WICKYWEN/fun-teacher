@@ -114,6 +114,44 @@ h1 {
 }
 .game-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(238,90,36,0.4); }
 
+.game-selector { display: flex; gap: 8px; justify-content: center; margin-bottom: 16px; flex-wrap: wrap; }
+.game-opt { padding: 8px 18px; border: 2px solid transparent; border-radius: 12px; background: #f0f0f0; cursor: pointer; font-size: 0.9em; transition: all 0.2s; }
+.game-opt.active { background: #667eea; color: #fff; border-color: #5a6fd6; }
+.game-opt:hover:not(.active) { background: #e0e0e0; }
+.game-section { display: none; }
+.game-section.active { display: block; }
+
+/* 记忆翻牌 */
+.mem-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 8px; max-width: 340px; margin: 0 auto;
+}
+.mem-card {
+  aspect-ratio: 1; background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  font-size: 2em; cursor: pointer; transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1); user-select: none;
+}
+.mem-card.flipped { background: #fff; transform: rotateY(180deg); box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+.mem-card.matched { background: #e8f5e9; transform: rotateY(180deg); cursor: default; opacity: 0.7; }
+.mem-card:not(.flipped):not(.matched):hover { transform: translateY(-3px); }
+
+/* 戳泡泡 */
+.bub-area {
+  width: 100%; max-width: 360px; height: 400px; margin: 0 auto;
+  background: linear-gradient(180deg, #e3f2fd 0%, #bbdefb 100%);
+  border-radius: 18px; position: relative; overflow: hidden;
+  cursor: crosshair; border: 2px solid #90caf9;
+}
+.bub-ball {
+  position: absolute; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1em; cursor: pointer; user-select: none;
+  transition: transform 0.05s;
+  box-shadow: inset -4px -4px 8px rgba(0,0,0,0.15), inset 4px 4px 8px rgba(255,255,255,0.4);
+}
+.bub-ball:active { transform: scale(1.3); }
+
 /* 排行榜 */
 .leaderboard {
   max-width: 500px; margin: 20px auto 0;
@@ -269,16 +307,21 @@ footer { text-align: center; padding: 24px 0 10px; color: #ccc; font-size: 0.8em
 </header>
 
 <div class="tabs">
-  <button class="tab-btn g1 active" data-tab="game">🎮 打地鼠</button>
+  <button class="tab-btn g1 active" data-tab="game">🎮 小游戏</button>
   <button class="tab-btn g2" data-tab="video">🎬 今日视频</button>
   <button class="tab-btn g3" data-tab="music">🎵 今日音乐</button>
 </div>
 
 <div id="tab-game" class="tab-content active">
-  <div class="game-area">
-    <div class="score-board">
-      ⏱ <span id="timerDisplay">30</span>s &nbsp;|&nbsp; 得分: <span id="score">0</span>
-    </div>
+  <div class="game-selector">
+    <button class="game-opt active" onclick="switchGame('mole')">🔨 打地鼠</button>
+    <button class="game-opt" onclick="switchGame('memory')">🃏 记忆翻牌</button>
+    <button class="game-opt" onclick="switchGame('bubble')">🫧 戳泡泡</button>
+  </div>
+
+  <!-- 打地鼠 -->
+  <div id="game-mole" class="game-section active">
+    <div class="score-board">⏱ <span id="timerDisplay">30</span>s &nbsp;|&nbsp; 得分: <span id="score">0</span></div>
     <div class="game-grid" id="gameGrid"></div>
     <button class="game-btn" id="gameStartBtn">🔨 开始敲地鼠！</button>
     <div class="toy-area">
@@ -287,9 +330,24 @@ footer { text-align: center; padding: 24px 0 10px; color: #ccc; font-size: 0.8em
       <button class="toy-btn" onclick="showRainbow()">🌈 彩虹</button>
     </div>
   </div>
+
+  <!-- 记忆翻牌 -->
+  <div id="game-memory" class="game-section">
+    <div class="score-board">🎯 配对: <span id="memPairs">0</span>/8 &nbsp;|&nbsp; 步数: <span id="memMoves">0</span></div>
+    <div class="mem-grid" id="memGrid"></div>
+    <button class="game-btn" id="memStartBtn">🃏 开始翻牌</button>
+  </div>
+
+  <!-- 戳泡泡 -->
+  <div id="game-bubble" class="game-section">
+    <div class="score-board">⏱ <span id="bubTimer">30</span>s &nbsp;|&nbsp; 戳破: <span id="bubScore">0</span> &nbsp;|&nbsp; ❤️ <span id="bubLives">3</span></div>
+    <div class="bub-area" id="bubArea"></div>
+    <button class="game-btn" id="bubStartBtn">🫧 开始戳泡泡</button>
+  </div>
+
   <div class="leaderboard">
-    <h3>🏆 打地鼠排行榜 <button class="refresh-btn" onclick="renderLeaderboard()" title="刷新">🔄</button></h3>
-    <table id="rankTable"><tr><td class="empty" colspan="3">还没有记录，快来打地鼠吧！</td></tr></table>
+    <h3>🏆 <span id="lbTitle">打地鼠</span>排行榜 <button class="refresh-btn" onclick="renderLeaderboard()">🔄</button></h3>
+    <table id="rankTable"><tr><td class="empty" colspan="3">还没有记录，快来玩吧！</td></tr></table>
   </div>
 </div>
 
@@ -494,7 +552,18 @@ function initDaily() {
   renderLeaderboard();
 }
 
-// ===== 游戏 =====
+// ===== 游戏切换 =====
+let currentGame = 'mole';
+function switchGame(game) {
+  currentGame = game;
+  document.querySelectorAll('.game-opt').forEach(b => b.classList.toggle('active', b.getAttribute('onclick').includes(game)));
+  document.querySelectorAll('.game-section').forEach(s => s.classList.toggle('active', s.id === 'game-' + game));
+  const names = { mole: '打地鼠', memory: '记忆翻牌', bubble: '戳泡泡' };
+  document.getElementById('lbTitle').textContent = names[game] || '打地鼠';
+  renderLeaderboard();
+}
+
+// ===== 打地鼠 =====
 const grid = document.getElementById('gameGrid');
 const scoreEl = document.getElementById('score');
 let score = 0, timeLeft = 30;
@@ -578,18 +647,151 @@ function playBeep(freq, dur) {
   } catch(e) {}
 }
 
+// ===== 记忆翻牌 =====
+const memEmojis = ['🐱','🐶','🐰','🐼','🦊','🐸','🐵','🦋'];
+let memCards = [], memFlipped = [], memLocked = false, memPairs = 0, memMoves = 0, memPlaying = false;
+
+function initMemGrid() {
+  const grid = document.getElementById('memGrid');
+  grid.innerHTML = '';
+  memCards = [...memEmojis, ...memEmojis];
+  for (let i = memCards.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1)); [memCards[i], memCards[j]] = [memCards[j], memCards[i]];
+  }
+  memCards.forEach((emoji, idx) => {
+    const card = document.createElement('div');
+    card.className = 'mem-card'; card.dataset.idx = idx;
+    card.addEventListener('click', () => flipCard(idx));
+    grid.appendChild(card);
+  });
+}
+
+function flipCard(idx) {
+  if (!memPlaying || memLocked) return;
+  const card = document.querySelectorAll('.mem-card')[idx];
+  if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
+  if (memFlipped.length >= 2) return;
+  card.textContent = memCards[idx]; card.classList.add('flipped');
+  memFlipped.push(idx);
+  if (memFlipped.length === 2) {
+    memMoves++; document.getElementById('memMoves').textContent = memMoves;
+    memLocked = true;
+    if (memCards[memFlipped[0]] === memCards[memFlipped[1]]) {
+      memFlipped.forEach(i => document.querySelectorAll('.mem-card')[i].classList.add('matched'));
+      memPairs++; document.getElementById('memPairs').textContent = memPairs;
+      memFlipped = []; memLocked = false;
+      playBeep(660, 0.1);
+      if (memPairs === 8) {
+        memPlaying = false;
+        const nick = localStorage.getItem(NICK_KEY);
+        const sc = Math.max(100 - memMoves * 2, 10);
+        saveScore(nick, sc);
+        alert('🎉 全部配对成功！\n得分: ' + sc + '\n步数: ' + memMoves);
+        renderLeaderboard();
+      }
+    } else {
+      setTimeout(() => {
+        memFlipped.forEach(i => { const c = document.querySelectorAll('.mem-card')[i]; c.textContent = ''; c.classList.remove('flipped'); });
+        memFlipped = []; memLocked = false;
+      }, 800);
+    }
+  }
+}
+
+document.getElementById('memStartBtn').addEventListener('click', () => {
+  memPairs = 0; memMoves = 0; memFlipped = []; memLocked = false;
+  document.getElementById('memPairs').textContent = '0';
+  document.getElementById('memMoves').textContent = '0';
+  initMemGrid(); memPlaying = true;
+});
+
+// ===== 戳泡泡 =====
+let bubPlaying = false, bubScore = 0, bubLives = 3, bubTimer = null, bubGen = null;
+const bubArea = document.getElementById('bubArea');
+const bubColors = ['#ff6b6b','#ffa94d','#ffd43b','#69db7c','#74c0fc','#b197fc','#f783ac'];
+
+document.getElementById('bubStartBtn').addEventListener('click', () => {
+  if (bubPlaying) {
+    stopBub();
+    return;
+  }
+  bubPlaying = true; bubScore = 0; bubLives = 3;
+  document.getElementById('bubScore').textContent = '0';
+  document.getElementById('bubLives').textContent = '3';
+  document.getElementById('bubStartBtn').textContent = '⏹ 结束戳泡泡';
+  bubArea.innerHTML = '';
+  let timeLeft = 30;
+  document.getElementById('bubTimer').textContent = '30';
+  bubTimer = setInterval(() => {
+    timeLeft--;
+    document.getElementById('bubTimer').textContent = timeLeft;
+    if (timeLeft <= 0) { stopBub(); endBub(); }
+  }, 1000);
+  bubGen = setInterval(() => {
+    if (!bubPlaying) return;
+    const bub = document.createElement('div');
+    const size = 30 + Math.random() * 30;
+    const x = Math.random() * (bubArea.clientWidth - size);
+    const color = bubColors[Math.floor(Math.random() * bubColors.length)];
+    bub.className = 'bub-ball';
+    Object.assign(bub.style, { width: size + 'px', height: size + 'px', left: x + 'px', bottom: '0', background: color });
+    bub.textContent = '🫧';
+    bub.addEventListener('click', (e) => { e.stopPropagation(); popBub(bub); });
+    bubArea.appendChild(bub);
+    let y = 0;
+    const float = setInterval(() => {
+      if (!bubPlaying || !bub.parentNode) { clearInterval(float); return; }
+      y += 1.5 + Math.random();
+      bub.style.bottom = y + 'px';
+      if (y > bubArea.clientHeight - size) {
+        clearInterval(float);
+        if (bub.parentNode) { bub.remove(); missBub(); }
+      }
+    }, 30);
+  }, 400);
+});
+
+function popBub(bub) {
+  if (!bubPlaying || !bub.parentNode) return;
+  bub.remove(); bubScore++;
+  document.getElementById('bubScore').textContent = bubScore;
+  playBeep(1200, 0.08);
+}
+
+function missBub() {
+  if (!bubPlaying) return;
+  bubLives--; document.getElementById('bubLives').textContent = bubLives;
+  if (bubLives <= 0) { stopBub(); endBub(); }
+}
+
+function stopBub() {
+  bubPlaying = false;
+  clearInterval(bubTimer); clearInterval(bubGen);
+  bubArea.querySelectorAll('.bub-ball').forEach(b => b.remove());
+  document.getElementById('bubStartBtn').textContent = '🫧 开始戳泡泡';
+}
+
+function endBub() {
+  const nick = localStorage.getItem(NICK_KEY);
+  saveScore(nick, bubScore);
+  renderLeaderboard();
+  alert('⏰ 游戏结束！\n戳破泡泡: ' + bubScore);
+}
+
 // ===== 排行榜 =====
 async function saveScore(nick, sc) {
-  await pushScore({ nick, score: sc, time: Date.now() });
+  await pushScore({ nick, score: sc, time: Date.now(), game: currentGame });
   renderLeaderboard();
 }
 
 async function renderLeaderboard() {
-  const data = await fetchScores();
+  const all = await fetchScores();
+  const data = all.filter(d => (d.game || 'mole') === currentGame);
   const table = document.getElementById('rankTable');
   const medals = ['🥇', '🥈', '🥉'];
+  const gameNames = { mole: '打地鼠', memory: '记忆翻牌', bubble: '戳泡泡' };
   if (!data.length) {
-    table.innerHTML = '<tr><td class="empty" colspan="3">还没有记录，快来打地鼠吧！</td></tr>';
+    table.innerHTML = '<tr><td class="empty" colspan="3">还没有' + gameNames[currentGame] + '记录，快来玩吧！</td></tr>';
     return;
   }
   const top = data.slice(0, 10);
