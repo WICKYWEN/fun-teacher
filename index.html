@@ -133,8 +133,8 @@ h1 {
 
 /* 视频区 */
 .video-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px; max-width: 1000px; margin: 0 auto;
+  display: grid; gap: 20px;
+  max-width: 900px; margin: 0 auto;
 }
 .video-card {
   background: #fff; border-radius: 16px; overflow: hidden;
@@ -148,12 +148,47 @@ h1 {
 .video-info p { font-size: 0.8em; color: #999; margin-top: 2px; }
 
 /* 音乐区 */
-.music-area { max-width: 600px; margin: 0 auto; }
-.music-embed {
-  background: #fff; border-radius: 14px; overflow: hidden;
-  margin-bottom: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+.music-area { max-width: 500px; margin: 0 auto; }
+.music-player {
+  background: #fff; border-radius: 20px; padding: 28px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06); text-align: center;
 }
-.music-embed iframe { width: 100%; border: none; display: block; }
+.music-cover {
+  width: 140px; height: 140px; border-radius: 50%;
+  margin: 0 auto 16px; background-size: cover; background-position: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  animation: spin 10s linear infinite; animation-play-state: paused;
+}
+.music-cover.playing { animation-play-state: running; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.music-title { font-size: 1.1em; color: #333; }
+.music-artist { color: #999; font-size: 0.85em; margin: 2px 0 16px; }
+.music-controls { display: flex; justify-content: center; align-items: center; gap: 16px; }
+.ctrl-btn {
+  width: 44px; height: 44px; border: none; border-radius: 50%;
+  background: #f5f5f5; font-size: 1.1em; cursor: pointer;
+  transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+}
+.ctrl-btn:hover { background: #e0e0e0; transform: scale(1.1); }
+.ctrl-btn.play-btn {
+  width: 56px; height: 56px; font-size: 1.4em;
+  background: linear-gradient(135deg, #66bb6a, #2e7d32); color: #fff;
+}
+.ctrl-btn.play-btn:hover { box-shadow: 0 6px 20px rgba(46,125,50,0.4); }
+.music-list {
+  margin-top: 14px; background: #fff; border-radius: 16px;
+  overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+.music-item {
+  padding: 12px 16px; display: flex; align-items: center;
+  justify-content: space-between; cursor: pointer;
+  transition: background 0.2s; border-bottom: 1px solid #f5f5f5;
+}
+.music-item:last-child { border-bottom: none; }
+.music-item:hover { background: #f9f9f9; }
+.music-item.active { background: #e8f5e9; }
+.music-item .name { font-size: 0.9em; color: #333; }
+.music-item .artist { font-size: 0.78em; color: #999; }
 
 /* 解压小玩具 */
 .toy-area {
@@ -237,7 +272,19 @@ footer { text-align: center; padding: 24px 0 10px; color: #ccc; font-size: 0.8em
 
 <div id="tab-music" class="tab-content">
   <div class="music-area">
-    <div id="musicEmbedList"></div>
+    <div class="music-player">
+      <div class="music-cover" id="musicCover"></div>
+      <div class="music-title" id="musicTitle">加载中...</div>
+      <div class="music-artist" id="musicArtist"></div>
+      <div class="music-controls">
+        <button class="ctrl-btn" onclick="prevMusic()">⏮</button>
+        <button class="ctrl-btn play-btn" id="playBtn" onclick="togglePlay()">▶</button>
+        <button class="ctrl-btn" onclick="nextMusic()">⏭</button>
+      </div>
+      <audio id="audioPlayer" preload="metadata"></audio>
+      <div style="margin-top:10px;font-size:0.78em;color:#bbb;" id="musicFallback"></div>
+    </div>
+    <div class="music-list" id="musicList"></div>
   </div>
 </div>
 
@@ -281,6 +328,14 @@ function logout() {
   location.reload();
 }
 
+(function checkLogin() {
+  const nick = localStorage.getItem(NICK_KEY);
+  if (nick) {
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('nickDisplay').textContent = '👋 ' + nick;
+  }
+})();
+
 // ===== 每日内容池 =====
 const videoPool = [
   { bv: 'BV1Jt4y1D7FY', title: '萌宠搞笑合集', desc: '看完心情超好 🐱' },
@@ -310,11 +365,6 @@ const musicPool = [
   { title: '月光奏鸣曲', artist: '贝多芬', id: '29760412', cover: 'linear-gradient(135deg, #2c3e50, #bdc3c7)' },
   { title: '神秘园之歌', artist: 'Secret Garden', id: '29760644', cover: 'linear-gradient(135deg, #134e5e, #71b280)' },
   { title: '春江花月夜', artist: '古筝名曲', id: '29760778', cover: 'linear-gradient(135deg, #d4fc79, #96e6a1)' },
-  { title: '琵琶语', artist: '林海', id: '317247', cover: 'linear-gradient(135deg, #9796f0, #fbc2eb)' },
-  { title: '高山流水', artist: '古筝名曲', id: '347230', cover: 'linear-gradient(135deg, #a8c0ff, #3f2b96)' },
-  { title: '雨的印记 (Kiss The Rain)', artist: 'Yiruma', id: '29008370', cover: 'linear-gradient(135deg, #4facfe, #00f2fe)' },
-  { title: '梁祝', artist: '小提琴协奏曲', id: '28970424', cover: 'linear-gradient(135deg, #fa709a, #fee140)' },
-  { title: '秋日私语', artist: 'Richard Clayderman', id: '28970758', cover: 'linear-gradient(135deg, #f093fb, #f5576c)' },
 ];
 
 let dailyVideos = [];
@@ -324,11 +374,11 @@ function initDaily() {
   const dateStr = new Date().toLocaleDateString('zh-CN', { year:'numeric', month:'long', day:'numeric', weekday:'long' });
   document.getElementById('dailyBadge').textContent = '📅 ' + dateStr;
 
-  dailyVideos = seededShuffle(videoPool, seed).slice(0, 6);
-  dailyMusic = seededShuffle(musicPool, seed).slice(0, 12);
+  dailyVideos = seededShuffle(videoPool, seed).slice(0, 3);
+  dailyMusic = seededShuffle(musicPool, seed).slice(0, 6);
 
   renderVideos();
-  renderMusic();
+  initMusic();
   renderLeaderboard();
 }
 
@@ -461,15 +511,78 @@ function renderVideos() {
   `).join('');
 }
 
-// ===== 音乐 (网易云 embed) =====
-function renderMusic() {
-  const container = document.getElementById('musicEmbedList');
-  container.innerHTML = dailyMusic.map(m => `
-    <div class="music-embed">
-      <iframe src="https://music.163.com/outchain/player?type=2&id=${m.id}&auto=0&height=66" height="66"></iframe>
-    </div>
-  `).join('');
+// ===== 音乐 (网易云) =====
+let currentIdx = 0;
+const audio = document.getElementById('audioPlayer');
+const playBtn = document.getElementById('playBtn');
+const cover = document.getElementById('musicCover');
+const titleEl = document.getElementById('musicTitle');
+const artistEl = document.getElementById('musicArtist');
+const listEl = document.getElementById('musicList');
+const fallbackEl = document.getElementById('musicFallback');
+
+function getMusicUrl(id) { return 'https://music.163.com/song/media/outer/url?id=' + id + '.mp3'; }
+
+function initMusic() {
+  currentIdx = 0;
+  renderMusicList();
+  loadMusic();
 }
+
+function renderMusicList() {
+  listEl.innerHTML = '';
+  dailyMusic.forEach((m, i) => {
+    const item = document.createElement('div');
+    item.className = 'music-item' + (i === currentIdx ? ' active' : '');
+    item.innerHTML = `<div><div class="name">${m.title}</div><div class="artist">${m.artist}</div></div><span>${i === currentIdx ? '▶' : ''}</span>`;
+    item.addEventListener('click', () => { currentIdx = i; loadMusic(); playMusic(); });
+    listEl.appendChild(item);
+  });
+}
+
+function loadMusic() {
+  const m = dailyMusic[currentIdx];
+  if (!m) return;
+  titleEl.textContent = m.title;
+  artistEl.textContent = m.artist;
+  cover.style.background = m.cover;
+  audio.src = getMusicUrl(m.id);
+  fallbackEl.innerHTML = `<a href="https://music.163.com/#/song?id=${m.id}" target="_blank" style="color:#42a5f5;text-decoration:none;">🔗 网易云打开</a>`;
+  renderMusicList();
+}
+
+function playMusic() {
+  audio.play().catch(() => {});
+  playBtn.textContent = '⏸';
+  cover.classList.add('playing');
+}
+
+function togglePlay() {
+  if (audio.paused) {
+    if (!audio.src) loadMusic();
+    playMusic();
+  } else {
+    audio.pause();
+    playBtn.textContent = '▶';
+    cover.classList.remove('playing');
+  }
+}
+
+function nextMusic() {
+  if (!dailyMusic.length) return;
+  currentIdx = (currentIdx + 1) % dailyMusic.length;
+  loadMusic();
+  if (!audio.paused) playMusic();
+}
+
+function prevMusic() {
+  if (!dailyMusic.length) return;
+  currentIdx = (currentIdx - 1 + dailyMusic.length) % dailyMusic.length;
+  loadMusic();
+  if (!audio.paused) playMusic();
+}
+
+audio.addEventListener('ended', nextMusic);
 
 // ===== 泡泡 =====
 function popBubbles() {
@@ -515,18 +628,12 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   });
 });
 
+// ===== 初始化 =====
+checkLogin();
+if (localStorage.getItem(NICK_KEY)) initDaily();
+
 // 回车登录
 document.getElementById('nickInput').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-
-// 页面加载时初始化（所有函数和变量都已就绪）
-(function boot() {
-  const nick = localStorage.getItem(NICK_KEY);
-  if (nick) {
-    document.getElementById('loginOverlay').style.display = 'none';
-    document.getElementById('nickDisplay').textContent = '👋 ' + nick;
-  }
-  initDaily();
-})();
 </script>
 </body>
 </html>
