@@ -647,10 +647,18 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 });
 
 // ===== 初始化 =====
-if (localStorage.getItem(NICK_KEY)) initDaily();
-
-// 回车登录
-document.getElementById('nickInput').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+// 页面加载后立即初始化所有内容
+document.addEventListener('DOMContentLoaded', function() {
+  initDaily();
+  const nick = localStorage.getItem(NICK_KEY);
+  if (nick) {
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('nickDisplay').textContent = '👋 ' + nick;
+  }
+  document.getElementById('nickInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') doLogin();
+  });
+});
 </script>
 </body>
 </html>
