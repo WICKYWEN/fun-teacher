@@ -188,47 +188,21 @@ h1 {
 .video-info p { font-size: 0.8em; color: #999; margin-top: 2px; }
 
 /* 音乐区 */
-.music-area { max-width: 500px; margin: 0 auto; }
-.music-player {
-  background: #fff; border-radius: 20px; padding: 28px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.06); text-align: center;
+/* 音乐 (网易云嵌入) */
+.music-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px; max-width: 700px; margin: 0 auto;
 }
-.music-cover {
-  width: 140px; height: 140px; border-radius: 50%;
-  margin: 0 auto 16px; background-size: cover; background-position: center;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-  animation: spin 10s linear infinite; animation-play-state: paused;
+.music-card {
+  background: #fff; border-radius: 14px; padding: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04); transition: all 0.2s;
 }
-.music-cover.playing { animation-play-state: running; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.music-title { font-size: 1.1em; color: #333; }
-.music-artist { color: #999; font-size: 0.85em; margin: 2px 0 16px; }
-.music-controls { display: flex; justify-content: center; align-items: center; gap: 16px; }
-.ctrl-btn {
-  width: 44px; height: 44px; border: none; border-radius: 50%;
-  background: #f5f5f5; font-size: 1.1em; cursor: pointer;
-  transition: all 0.2s; display: flex; align-items: center; justify-content: center;
-}
-.ctrl-btn:hover { background: #e0e0e0; transform: scale(1.1); }
-.ctrl-btn.play-btn {
-  width: 56px; height: 56px; font-size: 1.4em;
-  background: linear-gradient(135deg, #66bb6a, #2e7d32); color: #fff;
-}
-.ctrl-btn.play-btn:hover { box-shadow: 0 6px 20px rgba(46,125,50,0.4); }
-.music-list {
-  margin-top: 14px; background: #fff; border-radius: 16px;
-  overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-}
-.music-item {
-  padding: 12px 16px; display: flex; align-items: center;
-  justify-content: space-between; cursor: pointer;
-  transition: background 0.2s; border-bottom: 1px solid #f5f5f5;
-}
-.music-item:last-child { border-bottom: none; }
-.music-item:hover { background: #f9f9f9; }
-.music-item.active { background: #e8f5e9; }
-.music-item .name { font-size: 0.9em; color: #333; }
-.music-item .artist { font-size: 0.78em; color: #999; }
+.music-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+.music-card .info { display: flex; justify-content: space-between; margin-bottom: 8px; }
+.music-card .title { font-size: 0.88em; color: #333; font-weight: 600; }
+.music-card .artist { font-size: 0.78em; color: #999; }
+.music-card iframe { width: 100%; height: 66px; border-radius: 8px; }
+.music-fallback { text-align: center; color: #bbb; font-size: 0.85em; padding: 20px; }
 
 /* 解压小玩具 */
 .toy-area {
@@ -356,21 +330,8 @@ footer { text-align: center; padding: 24px 0 10px; color: #ccc; font-size: 0.8em
 </div>
 
 <div id="tab-music" class="tab-content">
-  <div class="music-area">
-    <div class="music-player">
-      <div class="music-cover" id="musicCover"></div>
-      <div class="music-title" id="musicTitle">加载中...</div>
-      <div class="music-artist" id="musicArtist"></div>
-      <div class="music-controls">
-        <button class="ctrl-btn" onclick="prevMusic()">⏮</button>
-        <button class="ctrl-btn play-btn" id="playBtn" onclick="togglePlay()">▶</button>
-        <button class="ctrl-btn" onclick="nextMusic()">⏭</button>
-      </div>
-      <audio id="audioPlayer" preload="metadata"></audio>
-      <div style="margin-top:10px;font-size:0.78em;color:#bbb;" id="musicFallback"></div>
-    </div>
-    <div class="music-list" id="musicList"></div>
-  </div>
+  <div class="music-grid" id="musicGrid"></div>
+  <div class="music-fallback" id="musicFallback"></div>
 </div>
 
 <footer>Made with ❤️ 给最辛苦的老师们 · 每日内容自动更新</footer>
@@ -524,32 +485,6 @@ async function fetchDailyVideos() {
 }
 
 let dailyVideos = [];
-const musicPool = [
-  { title: '夜的钢琴曲五', artist: '石进', id: '265989', cover: 'linear-gradient(135deg, #1a2980, #26d0ce)' },
-  { title: '卡农 (Canon)', artist: 'Pachelbel', id: '5264662', cover: 'linear-gradient(135deg, #a8edea, #fed6e3)' },
-  { title: 'River Flows In You', artist: 'Yiruma', id: '29760215', cover: 'linear-gradient(135deg, #667eea, #764ba2)' },
-  { title: '菊次郎的夏天', artist: '久石让', id: '579213', cover: 'linear-gradient(135deg, #ffe259, #ffa751)' },
-  { title: '致爱丽丝', artist: '贝多芬', id: '281368', cover: 'linear-gradient(135deg, #ee9ca7, #ffdde1)' },
-  { title: '晴天 (钢琴版)', artist: '周杰伦', id: '186016', cover: 'linear-gradient(135deg, #f5af19, #f12711)' },
-  { title: '梦中的婚礼', artist: 'Richard Clayderman', id: '29760305', cover: 'linear-gradient(135deg, #c94b4b, #4b134f)' },
-  { title: '蓝色多瑙河', artist: '施特劳斯', id: '17934527', cover: 'linear-gradient(135deg, #2193b0, #6dd5ed)' },
-  { title: '小夜曲', artist: '舒伯特', id: '29760520', cover: 'linear-gradient(135deg, #0c3483, #a2b6df)' },
-  { title: '月光奏鸣曲', artist: '贝多芬', id: '29760412', cover: 'linear-gradient(135deg, #2c3e50, #bdc3c7)' },
-  { title: '神秘园之歌', artist: 'Secret Garden', id: '29760644', cover: 'linear-gradient(135deg, #134e5e, #71b280)' },
-  { title: '春江花月夜', artist: '古筝', id: '29760778', cover: 'linear-gradient(135deg, #d4fc79, #96e6a1)' },
-  { title: '琵琶语', artist: '林海', id: '317247', cover: 'linear-gradient(135deg, #9796f0, #fbc2eb)' },
-  { title: '高山流水', artist: '古筝', id: '347230', cover: 'linear-gradient(135deg, #a8c0ff, #3f2b96)' },
-  { title: '梁祝', artist: '小提琴', id: '28970424', cover: 'linear-gradient(135deg, #fa709a, #fee140)' },
-  { title: '雨的印记', artist: 'Yiruma', id: '29008370', cover: 'linear-gradient(135deg, #4facfe, #00f2fe)' },
-  { title: '秋日私语', artist: 'Richard Clayderman', id: '28970758', cover: 'linear-gradient(135deg, #f093fb, #f5576c)' },
-  { title: '星空', artist: 'Richard Clayderman', id: '29760812', cover: 'linear-gradient(135deg, #0c3483, #a2b6df)' },
-  { title: '绿袖子', artist: '古典名曲', id: '29760934', cover: 'linear-gradient(135deg, #11998e, #38ef7d)' },
-  { title: '天鹅湖', artist: '柴可夫斯基', id: '29761056', cover: 'linear-gradient(135deg, #e0c3fc, #8ec5fc)' },
-  { title: '胡桃夹子', artist: '柴可夫斯基', id: '29761178', cover: 'linear-gradient(135deg, #f093fb, #f5576c)' },
-  { title: 'G弦上的咏叹调', artist: '巴赫', id: '29761290', cover: 'linear-gradient(135deg, #4facfe, #00f2fe)' },
-  { title: '梦幻曲', artist: '舒曼', id: '29761302', cover: 'linear-gradient(135deg, #43e97b, #38f9d7)' },
-  { title: '圣母颂', artist: '古诺/巴赫', id: '29761414', cover: 'linear-gradient(135deg, #fa709a, #fee140)' },
-];
 
 let dailyMusic = [];
 async function initDaily() {
@@ -560,6 +495,8 @@ async function initDaily() {
   const apiVideos = await fetchDailyVideos();
   const pool = apiVideos && apiVideos.length >= 6 ? apiVideos : fallbackVideos;
   dailyVideos = seededShuffle(pool, seed).slice(0, 6);
+  const apiMusic = await fetchDailyMusic();
+  const musicPool = apiMusic && apiMusic.length >= 12 ? apiMusic : fallbackMusic;
   dailyMusic = seededShuffle(musicPool, seed).slice(0, 12);
 
   renderVideos();
@@ -836,78 +773,72 @@ function renderVideos() {
   `).join('');
 }
 
-// ===== 音乐 (网易云) =====
-let currentIdx = 0;
-const audio = document.getElementById('audioPlayer');
-const playBtn = document.getElementById('playBtn');
-const cover = document.getElementById('musicCover');
-const titleEl = document.getElementById('musicTitle');
-const artistEl = document.getElementById('musicArtist');
-const listEl = document.getElementById('musicList');
-const fallbackEl = document.getElementById('musicFallback');
+// ===== 音乐 (网易云嵌入播放器) =====
+const MUSIC_API = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/daily_music.json`;
 
-function getMusicUrl(id) { return 'https://music.163.com/song/media/outer/url?id=' + id + '.mp3'; }
+// 备用音乐池（当 API 获取失败时使用）
+const fallbackMusic = [
+  { title: '夜的钢琴曲五', artist: '石进', id: '265989' },
+  { title: '卡农 (Canon)', artist: 'Pachelbel', id: '5264662' },
+  { title: 'River Flows In You', artist: 'Yiruma', id: '29760215' },
+  { title: '菊次郎的夏天', artist: '久石让', id: '579213' },
+  { title: '致爱丽丝', artist: '贝多芬', id: '281368' },
+  { title: '晴天 (钢琴版)', artist: '周杰伦', id: '186016' },
+  { title: '梦中的婚礼', artist: 'Richard Clayderman', id: '29760305' },
+  { title: '蓝色多瑙河', artist: '施特劳斯', id: '17934527' },
+  { title: '小夜曲', artist: '舒伯特', id: '29760520' },
+  { title: '月光奏鸣曲', artist: '贝多芬', id: '29760412' },
+  { title: '神秘园之歌', artist: 'Secret Garden', id: '29760644' },
+  { title: '春江花月夜', artist: '古筝', id: '29760778' },
+  { title: '琵琶语', artist: '林海', id: '317247' },
+  { title: '高山流水', artist: '古筝', id: '347230' },
+  { title: '梁祝', artist: '小提琴', id: '28970424' },
+  { title: '雨的印记', artist: 'Yiruma', id: '29008370' },
+  { title: '秋日私语', artist: 'Richard Clayderman', id: '28970758' },
+  { title: '星空', artist: 'Richard Clayderman', id: '29760812' },
+  { title: '绿袖子', artist: '古典名曲', id: '29760934' },
+  { title: '天鹅湖', artist: '柴可夫斯基', id: '29761056' },
+  { title: '胡桃夹子', artist: '柴可夫斯基', id: '29761178' },
+  { title: 'G弦上的咏叹调', artist: '巴赫', id: '29761290' },
+  { title: '梦幻曲', artist: '舒曼', id: '29761302' },
+  { title: '圣母颂', artist: '古诺/巴赫', id: '29761414' },
+];
 
-function initMusic() {
-  currentIdx = 0;
-  renderMusicList();
-  loadMusic();
-}
-
-function renderMusicList() {
-  listEl.innerHTML = '';
-  dailyMusic.forEach((m, i) => {
-    const item = document.createElement('div');
-    item.className = 'music-item' + (i === currentIdx ? ' active' : '');
-    item.innerHTML = `<div><div class="name">${m.title}</div><div class="artist">${m.artist}</div></div><span>${i === currentIdx ? '▶' : ''}</span>`;
-    item.addEventListener('click', () => { currentIdx = i; loadMusic(); playMusic(); });
-    listEl.appendChild(item);
-  });
-}
-
-function loadMusic() {
-  const m = dailyMusic[currentIdx];
-  if (!m) return;
-  titleEl.textContent = m.title;
-  artistEl.textContent = m.artist;
-  cover.style.background = m.cover;
-  audio.src = getMusicUrl(m.id);
-  fallbackEl.innerHTML = `<a href="https://music.163.com/#/song?id=${m.id}" target="_blank" style="color:#42a5f5;text-decoration:none;">🔗 网易云打开</a>`;
-  renderMusicList();
-}
-
-function playMusic() {
-  audio.play().catch(() => {});
-  playBtn.textContent = '⏸';
-  cover.classList.add('playing');
-}
-
-function togglePlay() {
-  if (audio.paused) {
-    if (!audio.src) loadMusic();
-    playMusic();
-  } else {
-    audio.pause();
-    playBtn.textContent = '▶';
-    cover.classList.remove('playing');
+async function fetchDailyMusic() {
+  try {
+    const r = await fetch(MUSIC_API, {
+      headers: { Authorization: `Bearer ${GH_TOKEN}` },
+      cache: 'no-cache'
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const file = await r.json();
+    const raw = atob(file.content.replace(/\s/g, ''));
+    return JSON.parse(decodeURIComponent(escape(raw)));
+  } catch(e) {
+    console.warn('fetchDailyMusic failed, using fallback', e);
+    return null;
   }
 }
 
-function nextMusic() {
-  if (!dailyMusic.length) return;
-  currentIdx = (currentIdx + 1) % dailyMusic.length;
-  loadMusic();
-  if (!audio.paused) playMusic();
+const musicGrid = document.getElementById('musicGrid');
+
+function renderMusicIframe(id) {
+  return `<iframe src="https://music.163.com/outchain/player?type=2&id=${id}&auto=0&height=66" allow="encrypted-media" frameborder="no"></iframe>`;
 }
 
-function prevMusic() {
-  if (!dailyMusic.length) return;
-  currentIdx = (currentIdx - 1 + dailyMusic.length) % dailyMusic.length;
-  loadMusic();
-  if (!audio.paused) playMusic();
+function initMusic() {
+  const pool = dailyMusic.length ? dailyMusic : seededShuffle(fallbackMusic, getTodaySeed()).slice(0, 12);
+  dailyMusic = pool;
+  document.getElementById('musicGrid').innerHTML = dailyMusic.map(m => `
+    <div class="music-card">
+      <div class="info">
+        <span class="title">${escHtml(m.title)}</span>
+        <span class="artist">${escHtml(m.artist)}</span>
+      </div>
+      ${renderMusicIframe(m.id)}
+    </div>
+  `).join('');
 }
-
-audio.addEventListener('ended', nextMusic);
 
 // ===== 泡泡 =====
 function popBubbles() {
