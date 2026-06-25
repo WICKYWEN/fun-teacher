@@ -1,4 +1,4 @@
-name: Update Daily Videos
+name: Update Daily Content
 
 on:
   schedule:
@@ -16,7 +16,7 @@ jobs:
       - name: Fetch Bilibili popular videos
         run: |
           python -c "
-import urllib.request, json, os
+import urllib.request, json
 url = 'https://api.bilibili.com/x/web-interface/popular'
 headers = {'User-Agent': 'Mozilla/5.0', 'Referer': 'https://www.bilibili.com/'}
 req = urllib.request.Request(url, headers=headers)
@@ -29,15 +29,40 @@ for v in data['data']['list']:
         'title': v['title'],
         'desc': ((v.get('rcmd_reason') or {}).get('content') or v.get('title') or '')[:30]
     })
-print(f'Fetched {len(videos)} videos')
+print(f'Videos: {len(videos)}')
 with open('daily_videos.json', 'w', encoding='utf-8') as f:
     json.dump(videos, f, ensure_ascii=False)
-print('Written to daily_videos.json')
+"
+      - name: Fetch NetEase music
+        run: |
+          python -c "
+import urllib.request, json
+playlists = ['3779629', '2884035', '19723756']
+headers = {'User-Agent': 'Mozilla/5.0', 'Referer': 'https://music.163.com/'}
+songs = None
+for pid in playlists:
+    try:
+        url = 'https://music.163.com/api/playlist/detail?id=' + pid
+        req = urllib.request.Request(url, headers=headers)
+        r = urllib.request.urlopen(req, timeout=10)
+        data = json.loads(r.read())
+        if data.get('code') == 200:
+            tracks = data.get('result', data).get('tracks', [])
+            songs = [{'id': str(t['id']), 'title': t['name'], 'artist': t['artists'][0]['name'] if t.get('artists') else '未知'} for t in tracks]
+            print(f'Playlist {pid}: {len(songs)} songs')
+            break
+    except: pass
+if songs:
+    with open('daily_music.json', 'w', encoding='utf-8') as f:
+        json.dump(songs, f, ensure_ascii=False)
+    print('Written daily_music.json')
+else:
+    print('All playlists failed')
 "
       - name: Commit and push
         run: |
           git config user.name "daily-update[bot]"
           git config user.email "daily-update[bot]@users.noreply.github.com"
-          git add daily_videos.json
-          git diff --quiet && git diff --staged --quiet || git commit -m "daily video update $(date +%Y-%m-%d)"
+          git add daily_videos.json daily_music.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "daily update $(date +%Y-%m-%d)"
           git push
